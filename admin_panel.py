@@ -15,40 +15,68 @@ class AdminPanel:
         self.win = None
 
     # ---------- ADMIN DASHBOARD ----------
+        # ---------- ADMIN DASHBOARD ----------
     def show_dashboard(self):
         self.win = tk.Tk()
         self.win.title("Admin Dashboard")
-        center_window(self.win, 997, 700)
+
+        # ---------- Responsive initial sizing ----------
+        # Get screen size
+        screen_w = self.win.winfo_screenwidth()
+        screen_h = self.win.winfo_screenheight()
+
+        # Your original "design" size
+        base_w, base_h = 997, 700
+
+        # Use up to 90% of screen, but not more than your base design
+        width = min(base_w, int(screen_w * 0.9))
+        height = min(base_h, int(screen_h * 0.9))
+
+        # Center the window with the computed size
+        center_window(self.win, width, height)
+
+        # Allow resizing + set a reasonable minimum
+        self.win.resizable(True, True)
+        self.win.minsize(800, 500)
         self.win.configure(bg=THEME_WHITE)
-        self.win.resizable(False, False)
 
         # ---------- Header ----------
         header = tk.Frame(self.win, bg=THEME_RED, height=60)
         header.pack(fill="x")
-        tk.Label(header, text="UVS ADMIN DASHBOARD", font=("Helvetica", 22, "bold"),
-                 bg=THEME_RED, fg=THEME_WHITE).pack(pady=10)
+        tk.Label(
+            header,
+            text="UVS ADMIN DASHBOARD",
+            font=("Helvetica", 22, "bold"),
+            bg=THEME_RED,
+            fg=THEME_WHITE
+        ).pack(pady=10)
 
         # ---------- Main Frame ----------
         main_frame = tk.Frame(self.win, bg=THEME_WHITE)
-        main_frame.pack(fill="both", expand=True, pady=10)
+        main_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # ✅ Make main_frame use grid and be responsive
+        main_frame.columnconfigure(0, weight=0)   # sidebar (fixed-ish)
+        main_frame.columnconfigure(1, weight=1)   # right panel expands
+        main_frame.rowconfigure(0, weight=1)
 
         # ---------- Sidebar ----------
         sidebar = tk.Frame(main_frame, bg=THEME_RED, width=220)
-        sidebar.pack(side="left", fill="y", padx=10, pady=10)
+        sidebar.grid(row=0, column=0, sticky="nsw", padx=(0, 10), pady=0)
+        # Keep its width (don't let children shrink it)
+        sidebar.grid_propagate(False)
 
         # ---------- Right Panel (dynamic content area) ----------
         self.right_panel = tk.Frame(main_frame, bg=THEME_WHITE)
-        self.right_panel.pack(side="right", fill="both", expand=True, padx=10, pady=10)
+        self.right_panel.grid(row=0, column=1, sticky="nsew", padx=0, pady=0)
 
-        tk.Label(self.right_panel, text="Welcome, Admin!",
-                 font=("Segoe UI", 16, "bold"),
-                 bg=THEME_WHITE, fg=THEME_RED).pack(pady=20)
-        tk.Label(self.right_panel, text="Select an option from the sidebar to manage the system.",
-                 font=("Segoe UI", 11),
-                 bg=THEME_WHITE, fg="gray").pack(pady=10)
+        # Let anything placed inside right_panel grow with it (if they use grid)
+        self.right_panel.columnconfigure(0, weight=1)
+        self.right_panel.rowconfigure(0, weight=1)
 
         # ---------- Sidebar Buttons ----------
         actions = [
+            ("Dash board", self.show_stats_dashboard),
             ("Register Candidate", self.show_candidate_registration),
             ("View Candidates", self.show_candidates),
             ("Manage Candidates", self.show_manage_candidates),
@@ -56,25 +84,57 @@ class AdminPanel:
             ("View Poll Status", self.show_poll_status),
             ("Manage Positions", self.show_manage_positions),
             ("Reset Votes", self._reset_votes),
-            ("Log Out", self._go_back)
+            ("Log Out", self._go_back),
         ]
 
         for text, cmd in actions:
-            btn_bg, btn_fg = (THEME_WHITE, THEME_RED) if text in ["Set Voting Duration", "Reset Votes", "Back"] else (THEME_RED, THEME_WHITE)
-            btn = tk.Button(sidebar, text=text, bg=btn_bg, fg=btn_fg, width=20, height=2,
-                            font=("Segoe UI", 11, "bold"), relief="flat", cursor="hand2",
-                            command=cmd)
-            btn.pack(pady=8)
+            btn_bg, btn_fg = (
+                (THEME_WHITE, THEME_RED)
+                if text in ["Set Voting Duration", "Reset Votes", "Back"]
+                else (THEME_RED, THEME_WHITE)
+            )
+            btn = tk.Button(
+                sidebar,
+                text=text,
+                bg=btn_bg,
+                fg=btn_fg,
+                width=20,
+                height=2,
+                font=("Segoe UI", 11, "bold"),
+                relief="flat",
+                cursor="hand2",
+                command=cmd,
+            )
+            # ✅ Make buttons stretch with sidebar width
+            btn.pack(pady=8, fill="x")
 
             # Hover effect
-            btn.bind("<Enter>", lambda e, b=btn: b.config(bg=THEME_WHITE if b.cget("bg") == THEME_RED else THEME_RED,
-                                                          fg=THEME_RED if b.cget("fg") == THEME_WHITE else THEME_WHITE))
-            btn.bind("<Leave>", lambda e, b=btn: b.config(bg=btn_bg, fg=btn_fg))
+            btn.bind(
+                "<Enter>",
+                lambda e, b=btn: b.config(
+                    bg=THEME_WHITE if b.cget("bg") == THEME_RED else THEME_RED,
+                    fg=THEME_RED if b.cget("fg") == THEME_WHITE else THEME_WHITE,
+                ),
+            )
+            btn.bind(
+                "<Leave>",
+                lambda e, b=btn: b.config(bg=btn_bg, fg=btn_fg),
+            )
 
-        tk.Label(self.win, text="© 2025 UTAMU Voting System", font=("Segoe UI", 9),
-                 bg=THEME_WHITE, fg="gray").pack(side="bottom", pady=4)
+        tk.Label(
+            self.win,
+            text="© 2025 UTAMU Voting System",
+            font=("Segoe UI", 9),
+            bg=THEME_WHITE,
+            fg="gray",
+        ).pack(side="bottom", pady=4)
+
+        # Show dashboard charts by default on login
+        self.show_stats_dashboard()
 
         self.win.mainloop()
+
+
 
     # ---------- Helper: Display content on right panel ----------
     def display_content(self, builder_func):
@@ -85,49 +145,92 @@ class AdminPanel:
     # ---------- Actions ----------
     def show_candidate_registration(self):
         def build(frame):
+            # ===== HEADER =====
+            header = tk.Frame(frame, bg=THEME_WHITE)
+            header.pack(fill="x", pady=(5, 10))
+
             tk.Label(
-                frame,
+                header,
                 text="Register Candidate",
-                font=("Segoe UI", 16, "bold"),
+                font=("Segoe UI", 18, "bold"),
                 bg=THEME_WHITE,
                 fg=THEME_RED,
-            ).pack(pady=12)
+            ).pack(anchor="w", padx=10)
 
-            form = tk.Frame(frame, bg=THEME_WHITE)
-            form.pack(pady=6)
-
-            # === Candidate name ===
             tk.Label(
-                form,
-                text="Candidate Name:",
+                header,
+                text="Capture candidate details and media that will appear on the ballot.",
+                font=("Segoe UI", 9),
                 bg=THEME_WHITE,
-                fg=THEME_RED,
-            ).grid(row=0, column=0, padx=8, pady=6, sticky="e")
+                fg="#555555",
+            ).pack(anchor="w", padx=10, pady=(2, 0))
 
-            name_entry = tk.Entry(form, width=28)
-            name_entry.grid(row=0, column=1, padx=8, pady=6)
+            # Thin red separator
+            tk.Frame(header, bg=THEME_RED, height=2).pack(fill="x", pady=(8, 0), padx=6)
 
-            # === Position selection (from positions table) ===
+            # ===== CARD CONTAINER =====
+            card = tk.Frame(
+                frame,
+                bg=THEME_WHITE,
+                highlightbackground=THEME_RED,
+                highlightthickness=1,
+                bd=0,
+                padx=18,
+                pady=16,
+            )
+            card.pack(padx=20, pady=16, fill="x")
+
+            # Two columns inside card
+            left = tk.Frame(card, bg=THEME_WHITE)
+            right = tk.Frame(card, bg=THEME_WHITE)
+            left.grid(row=0, column=0, sticky="nsew", padx=(0, 18))
+            right.grid(row=0, column=1, sticky="nsew")
+
+            card.columnconfigure(0, weight=1)
+            card.columnconfigure(1, weight=1)
+
+            # ================= LEFT: BASIC DETAILS =================
             tk.Label(
-                form,
-                text="Select Position:",
+                left,
+                text="Candidate Details",
+                font=("Segoe UI", 11, "bold"),
                 bg=THEME_WHITE,
                 fg=THEME_RED,
-            ).grid(row=1, column=0, padx=8, pady=6, sticky="e")
+            ).grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 10))
 
-            positions = self.db.get_all_positions()  # from positions table
+            # Full Name
+            tk.Label(
+                left,
+                text="Full Name *",
+                bg=THEME_WHITE,
+                fg=THEME_RED,
+                font=("Segoe UI", 10),
+            ).grid(row=1, column=0, padx=4, pady=6, sticky="e")
+
+            name_entry = tk.Entry(left, width=32, font=("Segoe UI", 10))
+            name_entry.grid(row=1, column=1, padx=4, pady=6, sticky="w")
+
+            # Position
+            tk.Label(
+                left,
+                text="Position *",
+                bg=THEME_WHITE,
+                fg=THEME_RED,
+                font=("Segoe UI", 10),
+            ).grid(row=2, column=0, padx=4, pady=6, sticky="e")
+
+            positions = self.db.get_all_positions()
             position_var = tk.StringVar()
             position_combo = ttk.Combobox(
-                form,
+                left,
                 textvariable=position_var,
                 values=positions,
                 state="readonly",
-                width=25,
+                width=30,
             )
-            position_combo.grid(row=1, column=1, padx=8, pady=6, sticky="w")
+            position_combo.grid(row=2, column=1, padx=4, pady=6, sticky="w")
 
             if positions:
-                # Set default visually; user can change it
                 position_combo.current(0)
             else:
                 messagebox.showwarning(
@@ -135,58 +238,116 @@ class AdminPanel:
                     "Please add positions first before registering candidates.",
                 )
 
-            # === File picker function (shared) ===
+            # Small hint under fields
+            tk.Label(
+                left,
+                text="Fields marked * are required.",
+                bg=THEME_WHITE,
+                fg="#777777",
+                font=("Segoe UI", 8, "italic"),
+            ).grid(row=3, column=0, columnspan=2, sticky="w", pady=(4, 0))
+
+            # ================= RIGHT: MEDIA UPLOADS =================
+            tk.Label(
+                right,
+                text="Media Uploads",
+                font=("Segoe UI", 11, "bold"),
+                bg=THEME_WHITE,
+                fg=THEME_RED,
+            ).grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 10))
+
+            # Shared file picker
             def browse_file(path_var, label_widget, title):
                 path = filedialog.askopenfilename(
                     title=title,
-                    filetypes=[("Images", "*.jpg *.jpeg *.png *.gif *.bmp"), ("All Files", "*.*")],
+                    filetypes=[
+                        ("Images", "*.jpg *.jpeg *.png *.gif *.bmp"),
+                        ("All Files", "*.*"),
+                    ],
                 )
                 if path:
                     path_var.set(path)
                     label_widget.config(text=os.path.basename(path), fg="black")
 
-            # === Candidate Photo ===
+            # Photo
             photo_path = tk.StringVar()
+            tk.Label(
+                right,
+                text="Candidate Photo:",
+                bg=THEME_WHITE,
+                fg=THEME_RED,
+                font=("Segoe UI", 10),
+            ).grid(row=1, column=0, padx=4, pady=6, sticky="e")
+
             tk.Button(
-                form,
+                right,
                 text="Upload Photo",
                 bg=THEME_RED,
                 fg=THEME_WHITE,
                 relief="flat",
+                font=("Segoe UI", 9, "bold"),
                 command=lambda: browse_file(
                     photo_path, lbl_photo, "Select Candidate Photo"
                 ),
-                width=15,
-            ).grid(row=2, column=0, padx=6, pady=8, sticky="e")
+                width=18,
+                cursor="hand2",
+            ).grid(row=1, column=1, padx=4, pady=6, sticky="w")
 
             lbl_photo = tk.Label(
-                form, text="No photo selected", bg=THEME_WHITE, fg="gray"
+                right,
+                text="No photo selected",
+                bg=THEME_WHITE,
+                fg="gray",
+                font=("Segoe UI", 8),
             )
-            lbl_photo.grid(row=2, column=1, padx=6, pady=8, sticky="w")
+            lbl_photo.grid(row=2, column=1, padx=4, pady=(0, 10), sticky="w")
 
-            # === Candidate Logo ===
+            # Logo
             logo_path = tk.StringVar()
+            tk.Label(
+                right,
+                text="Candidate Logo:",
+                bg=THEME_WHITE,
+                fg=THEME_RED,
+                font=("Segoe UI", 10),
+            ).grid(row=3, column=0, padx=4, pady=6, sticky="e")
+
             tk.Button(
-                form,
+                right,
                 text="Upload Logo",
                 bg=THEME_RED,
                 fg=THEME_WHITE,
                 relief="flat",
+                font=("Segoe UI", 9, "bold"),
                 command=lambda: browse_file(
                     logo_path, lbl_logo, "Select Candidate Logo"
                 ),
-                width=15,
-            ).grid(row=3, column=0, padx=6, pady=8, sticky="e")
+                width=18,
+                cursor="hand2",
+            ).grid(row=3, column=1, padx=4, pady=6, sticky="w")
 
             lbl_logo = tk.Label(
-                form, text="No logo selected", bg=THEME_WHITE, fg="gray"
+                right,
+                text="No logo selected",
+                bg=THEME_WHITE,
+                fg="gray",
+                font=("Segoe UI", 8),
             )
-            lbl_logo.grid(row=3, column=1, padx=6, pady=8, sticky="w")
+            lbl_logo.grid(row=4, column=1, padx=4, pady=(0, 6), sticky="w")
 
-            # === Save candidate ===
+            # Tip text
+            tk.Label(
+                right,
+                text="Tip: Use clear, front-facing photos\nfor better recognition on the ballot.",
+                bg=THEME_WHITE,
+                fg="#777777",
+                font=("Segoe UI", 8, "italic"),
+                justify="left",
+            ).grid(row=5, column=0, columnspan=2, sticky="w", pady=(6, 0))
+
+            # ===== SAVE CANDIDATE BUTTON =====
             def save_candidate():
                 name = name_entry.get().strip()
-                # IMPORTANT: read directly from the combobox, not from some other list
                 position = position_combo.get().strip()
                 photo = photo_path.get().strip()
                 logo = logo_path.get().strip()
@@ -194,73 +355,196 @@ class AdminPanel:
                 if not name or not position:
                     messagebox.showwarning(
                         "Input Error",
-                        "Please fill all fields and select a position.",
+                        "Please enter the candidate name and select a position.",
                     )
                     return
 
                 try:
                     self.db.add_candidate(name, position, photo, logo)
-                    messagebox.showinfo(
-                        "Success", f"Candidate '{name}' added successfully!"
-                    )
-                    # Clear fields for the next entry
-                    name_entry.delete(0, tk.END)
-                    photo_path.set("")
-                    logo_path.set("")
-                    lbl_photo.config(text="No photo selected", fg="gray")
-                    lbl_logo.config(text="No logo selected", fg="gray")
-                    if positions:
-                        position_combo.current(0)
+        
+                    # Go straight to "View Candidates"
+                    self.show_candidates()
+                    return
+
                 except Exception as e:
                     messagebox.showerror("Database Error", str(e))
 
+            footer = tk.Frame(frame, bg=THEME_WHITE)
+            footer.pack(fill="x", pady=(0, 10))
+
             tk.Button(
-                frame,
+                footer,
                 text="Save Candidate",
                 bg=THEME_RED,
                 fg=THEME_WHITE,
                 font=("Segoe UI", 11, "bold"),
-                width=18,
+                width=20,
                 relief="flat",
+                cursor="hand2",
                 command=save_candidate,
-            ).pack(pady=15)
+            ).pack(pady=5)
 
         self.display_content(build)
+
 
 
     def show_voting_duration_window(self):
         def build(frame):
-            tk.Label(frame, text="Set Voting Duration", font=("Segoe UI", 16, "bold"),
-                     bg=THEME_WHITE, fg=THEME_RED).pack(pady=12)
+            # ===== HEADER =====
+            header = tk.Frame(frame, bg=THEME_WHITE)
+            header.pack(fill="x", pady=(5, 10))
 
-            form = tk.Frame(frame, bg=THEME_WHITE)
-            form.pack(pady=6)
+            tk.Label(
+                header,
+                text="Set Voting Duration",
+                font=("Segoe UI", 18, "bold"),
+                bg=THEME_WHITE,
+                fg=THEME_RED,
+            ).pack(anchor="w", padx=10)
 
-            tk.Label(form, text="Start (YYYY-MM-DD HH:MM):", bg=THEME_WHITE, fg=THEME_RED).grid(row=0, column=0, padx=8, pady=6, sticky="e")
-            start_entry = tk.Entry(form, width=25)
-            start_entry.grid(row=0, column=1, padx=8, pady=6)
+            tk.Label(
+                header,
+                text="Define when students are allowed to cast their votes. Times use the system clock.",
+                font=("Segoe UI", 9),
+                bg=THEME_WHITE,
+                fg="#555555",
+            ).pack(anchor="w", padx=10, pady=(2, 0))
 
-            tk.Label(form, text="End (YYYY-MM-DD HH:MM):", bg=THEME_WHITE, fg=THEME_RED).grid(row=1, column=0, padx=8, pady=6, sticky="e")
-            end_entry = tk.Entry(form, width=25)
-            end_entry.grid(row=1, column=1, padx=8, pady=6)
+            # Thin red separator
+            tk.Frame(header, bg=THEME_RED, height=2).pack(fill="x", pady=(8, 0), padx=6)
+
+            # ===== CARD CONTAINER =====
+            card = tk.Frame(
+                frame,
+                bg=THEME_WHITE,
+                highlightbackground=THEME_RED,
+                highlightthickness=1,
+                bd=0,
+                padx=18,
+                pady=16,
+            )
+            card.pack(padx=20, pady=16, fill="x")
+
+            form = tk.Frame(card, bg=THEME_WHITE)
+            form.pack(fill="x")
+
+            # ---- Start time ----
+            tk.Label(
+                form,
+                text="Start Date & Time *",
+                bg=THEME_WHITE,
+                fg=THEME_RED,
+                font=("Segoe UI", 10, "bold"),
+            ).grid(row=0, column=0, padx=6, pady=(2, 4), sticky="w")
+
+            start_entry = tk.Entry(form, width=28, font=("Segoe UI", 10))
+            start_entry.grid(row=1, column=0, padx=6, pady=(0, 8), sticky="w")
+
+            tk.Label(
+                form,
+                text="Format: YYYY-MM-DD HH:MM   e.g. 2025-03-15 09:30",
+                bg=THEME_WHITE,
+                fg="#777777",
+                font=("Segoe UI", 8, "italic"),
+            ).grid(row=2, column=0, padx=6, pady=(0, 10), sticky="w")
+
+            # ---- End time ----
+            tk.Label(
+                form,
+                text="End Date & Time *",
+                bg=THEME_WHITE,
+                fg=THEME_RED,
+                font=("Segoe UI", 10, "bold"),
+            ).grid(row=0, column=1, padx=6, pady=(2, 4), sticky="w")
+
+            end_entry = tk.Entry(form, width=28, font=("Segoe UI", 10))
+            end_entry.grid(row=1, column=1, padx=6, pady=(0, 8), sticky="w")
+
+            tk.Label(
+                form,
+                text="Must be later than the start time.",
+                bg=THEME_WHITE,
+                fg="#777777",
+                font=("Segoe UI", 8, "italic"),
+            ).grid(row=2, column=1, padx=6, pady=(0, 10), sticky="w")
+
+            # Stretch form columns nicely
+            form.columnconfigure(0, weight=1)
+            form.columnconfigure(1, weight=1)
+
+            # Small note at bottom of card
+            tk.Label(
+                card,
+                text="Tip: Set a clear voting window and communicate it to all students.",
+                bg=THEME_WHITE,
+                fg="#666666",
+                font=("Segoe UI", 8),
+            ).pack(anchor="w", pady=(4, 0))
+
+            # ===== FOOTER BUTTONS =====
+            footer = tk.Frame(frame, bg=THEME_WHITE)
+            footer.pack(fill="x", pady=(8, 10))
 
             def save_duration():
                 try:
-                    start = datetime.fromisoformat(start_entry.get().strip())
-                    end = datetime.fromisoformat(end_entry.get().strip())
+                    start_str = start_entry.get().strip()
+                    end_str = end_entry.get().strip()
+
+                    if not start_str or not end_str:
+                        messagebox.showerror(
+                            "Missing Values",
+                            "Please enter both start and end date/time.",
+                        )
+                        return
+
+                    start = datetime.fromisoformat(start_str)
+                    end = datetime.fromisoformat(end_str)
+
                     if end <= start:
                         messagebox.showerror("Error", "End time must be after start time.")
                         return
-                    self.db.set_voting_duration(start.isoformat(), end.isoformat())
-                    messagebox.showinfo("Success", "Voting duration saved!")
-                except Exception as e:
-                    messagebox.showerror("Error", f"Invalid format. Use YYYY-MM-DD HH:MM\n\n{e}")
 
-            tk.Button(frame, text="Save Duration", bg=THEME_RED, fg=THEME_WHITE,
-                      font=("Segoe UI", 11, "bold"), width=16, relief="flat",
-                      command=save_duration).pack(pady=15)
+                    self.db.set_voting_duration(start.isoformat(), end.isoformat())
+                    messagebox.showinfo("Success", "Voting duration saved successfully!")
+
+                    # 👉 After saving, go back to the dashboard analytics
+                    self.show_stats_dashboard()
+
+                except Exception as e:
+                    messagebox.showerror(
+                        "Error",
+                        "Invalid format. Use YYYY-MM-DD HH:MM\n\n"
+                        f"Details: {e}",
+                    )
+
+            # Primary button: Save
+            tk.Button(
+                footer,
+                text="Save Voting Duration",
+                bg=THEME_RED,
+                fg=THEME_WHITE,
+                font=("Segoe UI", 11, "bold"),
+                width=20,
+                relief="flat",
+                cursor="hand2",
+                command=save_duration,
+            ).pack(side="left", padx=10, pady=5)
+
+            # Secondary button: Back to Dashboard (optional shortcut)
+            tk.Button(
+                footer,
+                text="Back to Dashboard",
+                bg=THEME_WHITE,
+                fg=THEME_RED,
+                font=("Segoe UI", 10, "bold"),
+                relief="solid",
+                bd=1,
+                cursor="hand2",
+                command=self.show_stats_dashboard,
+            ).pack(side="left", padx=6, pady=5)
 
         self.display_content(build)
+
 
     def show_poll_status(self):
         def build(frame):
@@ -307,6 +591,22 @@ class AdminPanel:
             canvas.pack(side="left", fill="both", expand=True)
             scrollbar.pack(side="right", fill="y")
 
+            # --- Mouse wheel scrolling (no bind_all, so no TclError when closed) ---
+            def _on_mousewheel(event, c=canvas):
+                # Windows / MacOS (event.delta)
+                if hasattr(event, "delta") and event.delta:
+                    c.yview_scroll(int(-1 * (event.delta / 120)), "units")
+                else:
+                    # Linux (Button-4 / Button-5)
+                    if event.num == 4:
+                        c.yview_scroll(-1, "units")
+                    elif event.num == 5:
+                        c.yview_scroll(1, "units")
+
+            canvas.bind("<MouseWheel>", _on_mousewheel)   # Windows / Mac
+            canvas.bind("<Button-4>", _on_mousewheel)     # Linux scroll up
+            canvas.bind("<Button-5>", _on_mousewheel)     # Linux scroll down
+
             # Load candidates
             try:
                 candidates = self.db.get_candidates()
@@ -323,6 +623,10 @@ class AdminPanel:
                     font=("Segoe UI", 11, "italic")
                 ).pack(pady=20)
                 return
+
+            # === Show last registered candidate on top ===
+            # Assuming id increases with each insert -> reverse list in Python
+            candidates = list(reversed(candidates))
 
             # Clear old images
             self._photo_cache.clear()
@@ -349,7 +653,7 @@ class AdminPanel:
                         raise FileNotFoundError
 
                     img = img.resize((120, 120))
-                    # IMPORTANT: tie image to admin window
+                    # tie image to admin window
                     photo_img = ImageTk.PhotoImage(img, master=self.win)
                 except Exception:
                     placeholder = Image.new("RGB", (120, 120), color=(240, 240, 240))
@@ -403,6 +707,7 @@ class AdminPanel:
 
         # Use your shared right-panel content loader
         self.display_content(build)
+
 
 
 
@@ -781,6 +1086,299 @@ class AdminPanel:
             ).pack(anchor="w")
 
         self.display_content(build)
+
+    def show_stats_dashboard(self):
+        """Visual dashboard: leaders per position + pie chart + bar graph of current poll status."""
+        def build(frame):
+            # ---------- HEADER ----------
+            header = tk.Frame(frame, bg=THEME_WHITE)
+            header.pack(fill="x", pady=(5, 5))
+
+            tk.Label(
+                header,
+                text="Poll Analytics Dashboard",
+                font=("Segoe UI", 18, "bold"),
+                bg=THEME_WHITE,
+                fg=THEME_RED,
+            ).pack(anchor="w", padx=10)
+
+            tk.Label(
+                header,
+                text="Leaders per position and visual summary of current votes.",
+                font=("Segoe UI", 9),
+                bg=THEME_WHITE,
+                fg="#555555",
+            ).pack(anchor="w", padx=10, pady=(0, 4))
+
+            # ---------- LOAD DATA ----------
+            # rows: (position, name, votes)
+            rows = self.db.get_poll_status()
+
+            if not rows:
+                tk.Label(
+                    frame,
+                    text="No poll data available yet.",
+                    font=("Segoe UI", 11, "italic"),
+                    bg=THEME_WHITE,
+                    fg="gray",
+                ).pack(pady=40)
+                return
+
+            candidates = [(pos, name, votes) for (pos, name, votes) in rows]
+            total_votes = sum(v for _, _, v in candidates)
+
+            if total_votes == 0:
+                tk.Label(
+                    frame,
+                    text="No votes have been cast yet.\nCharts will appear once voting starts.",
+                    font=("Segoe UI", 11),
+                    bg=THEME_WHITE,
+                    fg="gray",
+                    justify="center",
+                ).pack(pady=40)
+                return
+
+            # sort by votes desc and limit to top 8 for charts
+            candidates_sorted = sorted(candidates, key=lambda r: r[2], reverse=True)
+            top_candidates = candidates_sorted[:8]
+
+            # ---------- LEADERS PER POSITION ----------
+            # NOTE: your SQL already orders by position, votes DESC
+            # so the first row for each position is the leader.
+            leaders = {}
+            for pos, name, votes in rows:
+                if pos not in leaders:      # first one we see for that pos is the leader
+                    leaders[pos] = (name, votes)
+
+            leader_items = sorted(leaders.items(), key=lambda kv: kv[0])  # sort by position name
+
+            leaders_frame = tk.Frame(frame, bg=THEME_WHITE)
+            leaders_frame.pack(fill="x", padx=10, pady=(6, 4))
+
+            tk.Label(
+                leaders_frame,
+                text="Position Leaders",
+                font=("Segoe UI", 11, "bold"),
+                bg=THEME_WHITE,
+                fg=THEME_RED,
+            ).pack(anchor="w", pady=(0, 4))
+
+            tree = ttk.Treeview(
+                leaders_frame,
+                columns=("Position", "Leader", "Votes"),
+                show="headings",
+                height=min(len(leader_items), 7),
+            )
+            tree.heading("Position", text="Position")
+            tree.heading("Leader", text="Leading Candidate")
+            tree.heading("Votes", text="Votes")
+
+            tree.column("Position", width=160, anchor="w")
+            tree.column("Leader", width=220, anchor="w")
+            tree.column("Votes", width=80, anchor="center")
+
+            tree.pack(fill="x", expand=False)
+
+            for pos, (name, votes) in leader_items:
+                tree.insert("", "end", values=(pos, name, votes))
+
+            # ---------- MAIN CHARTS CONTAINER ----------
+            charts_container = tk.Frame(frame, bg=THEME_WHITE)
+            charts_container.pack(fill="both", expand=True, padx=10, pady=10)
+
+            # Left: Pie chart
+            pie_frame = tk.Frame(charts_container, bg=THEME_WHITE)
+            pie_frame.pack(side="left", fill="both", expand=True, padx=(0, 8))
+
+            # Right: Bar chart + legend
+            bar_frame = tk.Frame(charts_container, bg=THEME_WHITE)
+            bar_frame.pack(side="right", fill="both", expand=True, padx=(8, 0))
+
+            # ---------------- PIE CHART ----------------
+            tk.Label(
+                pie_frame,
+                text="Vote Share (Top Candidates)",
+                font=("Segoe UI", 11, "bold"),
+                bg=THEME_WHITE,
+                fg=THEME_RED,
+            ).pack(anchor="w", pady=(0, 4), padx=4)
+
+            pie_canvas = tk.Canvas(
+                pie_frame,
+                width=320,
+                height=260,
+                bg=THEME_WHITE,
+                highlightthickness=0,
+            )
+            pie_canvas.pack(pady=4, fill="both", expand=True)
+
+            slice_colors = [
+                "#e53935", "#8e24aa", "#3949ab", "#00897b",
+                "#fbc02d", "#fb8c00", "#6d4c41", "#5e35b1",
+            ]
+
+            x0, y0, x1, y1 = 30, 20, 290, 240
+            start_angle = 0
+
+            for idx, (_, name, votes) in enumerate(top_candidates):
+                if votes <= 0:
+                    continue
+                extent = (votes / total_votes) * 360
+                color = slice_colors[idx % len(slice_colors)]
+                pie_canvas.create_arc(
+                    x0, y0, x1, y1,
+                    start=start_angle,
+                    extent=extent,
+                    fill=color,
+                    outline=THEME_WHITE,
+                )
+                start_angle += extent
+
+            # Legend under pie
+            legend_frame = tk.Frame(pie_frame, bg=THEME_WHITE)
+            legend_frame.pack(pady=(6, 0), anchor="w", padx=4)
+
+            for idx, (pos, name, votes) in enumerate(top_candidates):
+                color = slice_colors[idx % len(slice_colors)]
+                row = tk.Frame(legend_frame, bg=THEME_WHITE)
+                row.pack(anchor="w", pady=1)
+
+                tk.Canvas(
+                    row, width=12, height=12, bg=color, highlightthickness=0
+                ).pack(side="left", padx=(0, 4))
+
+                percent = (votes / total_votes) * 100 if total_votes > 0 else 0
+                tk.Label(
+                    row,
+                    text=f"{name} ({pos}) – {votes} votes ({percent:.1f}%)",
+                    bg=THEME_WHITE,
+                    fg="#333333",
+                    font=("Segoe UI", 8),
+                ).pack(side="left")
+
+            # ---------------- BAR CHART ----------------
+            tk.Label(
+                bar_frame,
+                text="Votes per Candidate (Top 8)",
+                font=("Segoe UI", 11, "bold"),
+                bg=THEME_WHITE,
+                fg=THEME_RED,
+            ).pack(anchor="w", pady=(0, 4), padx=4)
+
+            bar_canvas_width = 420
+            bar_canvas_height = 260
+
+            bar_canvas = tk.Canvas(
+                bar_frame,
+                width=bar_canvas_width,
+                height=bar_canvas_height,
+                bg=THEME_WHITE,
+                highlightthickness=0,
+            )
+            bar_canvas.pack(pady=4, fill="both", expand=True)
+
+            max_votes = max(v for _, _, v in top_candidates) or 1
+
+            # dynamic left margin based on longest candidate name
+            max_name_len = max(len(name) for _, name, _ in top_candidates)
+            label_col_width = min(180, 7 * max_name_len)  # ~7px per char, capped
+
+            chart_left = 20 + label_col_width
+            chart_right = bar_canvas_width - 20
+            chart_top = 20
+            chart_bottom = bar_canvas_height - 30
+
+            bar_height = 18
+            bar_gap = 8
+
+            # Axis lines
+            bar_canvas.create_line(
+                chart_left, chart_top,
+                chart_left, chart_bottom,
+                fill="#cccccc"
+            )
+            bar_canvas.create_line(
+                chart_left, chart_bottom,
+                chart_right, chart_bottom,
+                fill="#cccccc"
+            )
+
+            # Optional x-axis ticks (0.5 and 1.0 of max_votes)
+            for frac in (0.5, 1.0):
+                x = chart_left + frac * (chart_right - chart_left)
+                bar_canvas.create_line(
+                    x, chart_bottom,
+                    x, chart_bottom + 4,
+                    fill="#aaaaaa"
+                )
+                bar_canvas.create_text(
+                    x,
+                    chart_bottom + 12,
+                    text=str(int(frac * max_votes)),
+                    font=("Segoe UI", 7),
+                    fill="#777777",
+                )
+
+            # Bars + labels
+            for idx, (pos, name, votes) in enumerate(top_candidates):
+                y = chart_top + idx * (bar_height + bar_gap)
+                if y + bar_height > chart_bottom:
+                    break
+
+                bar_length = (votes / max_votes) * (chart_right - chart_left - 10)
+                color = slice_colors[idx % len(slice_colors)]
+
+                # Bar
+                bar_canvas.create_rectangle(
+                    chart_left,
+                    y,
+                    chart_left + bar_length,
+                    y + bar_height,
+                    fill=color,
+                    outline="",
+                )
+
+                # Candidate label – clear left column, fully visible
+                bar_canvas.create_text(
+                    chart_left - 10,
+                    y + bar_height / 2,
+                    text=name,
+                    anchor="e",
+                    font=("Segoe UI", 9),
+                    fill="#333333",
+                )
+
+                # Vote count at end of bar
+                bar_canvas.create_text(
+                    chart_left + bar_length + 4,
+                    y + bar_height / 2,
+                    text=str(votes),
+                    anchor="w",
+                    font=("Segoe UI", 8, "bold"),
+                    fill="#555555",
+                )
+
+            # ---------- FOOTER SUMMARY ----------
+            tk.Label(
+                frame,
+                text=f"Total votes counted: {total_votes}",
+                bg=THEME_WHITE,
+                fg="#555555",
+                font=("Segoe UI", 9, "italic"),
+            ).pack(pady=(4, 2))
+
+            # overall (all positions combined) leader
+            leader_pos, leader_name, leader_votes = top_candidates[0]
+            tk.Label(
+                frame,
+                text=f"Overall leader (all positions): {leader_name} ({leader_pos}) with {leader_votes} votes.",
+                bg=THEME_WHITE,
+                fg=THEME_RED,
+                font=("Segoe UI", 9, "bold"),
+            ).pack(pady=(0, 8))
+
+        self.display_content(build)
+
 
 
     def _reset_votes(self):
