@@ -3,11 +3,9 @@
 A desktop-based electronic voting system built for **UTAMU** using Python and Tkinter.  
 The system supports **secure admin management**, **student self-registration**, **position-based voting**, and **real-time poll results**, all backed by an SQLite database.
 
----
-
 ##  Main Features
 
-### 👨‍💻 Admin Module
+### Admin Module
 
 - **Admin Login**
   - Default admin credentials (on first run):  
@@ -74,9 +72,8 @@ The system supports **secure admin management**, **student self-registration**, 
     - All candidate vote counts to `0`
     - All students’ `has_voted` status back to *not voted*
 
----
 
-### 🎓 Student Module
+### Student Module
 
 - **Student Registration**
   - Students can create their own accounts with:
@@ -106,18 +103,14 @@ The system supports **secure admin management**, **student self-registration**, 
 - **Logout**
   - Returns to login window.
 
----
-
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Language:** Python 3.x
 - **GUI:** Tkinter
 - **Database:** SQLite (`voting_system.db`)
 - **Images:** Pillow (`PIL` / `Pillow` package)
 
----
-
-## 📁 Project Structure
+## Project Structure
 
 Typical project layout:
 
