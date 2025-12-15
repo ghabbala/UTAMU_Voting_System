@@ -195,20 +195,21 @@ class StudentPanel:
             return
 
         def build(frame):
-            frame.rowconfigure(2, weight=1)
+            # layout config
+            frame.rowconfigure(3, weight=1)   # scrollable list row
             frame.columnconfigure(0, weight=1)
 
+            # ---------- TITLE (CENTERED) ----------
             tk.Label(
                 frame,
                 text="CAST YOUR VOTE",
                 font=("Segoe UI", 18, "bold"),
                 bg=THEME_WHITE,
                 fg=THEME_RED,
-            ).grid(row=0, column=0, pady=10, sticky="n")
+            ).grid(row=0, column=0, pady=10)   # no sticky, so it centers
 
-            # Countdown timer section
+            # ---------- COUNTDOWN (CENTERED) ----------
             from datetime import datetime
-
             duration = self.db.get_voting_duration()
             if not duration:
                 tk.Label(
@@ -229,7 +230,7 @@ class StudentPanel:
                 fg="#333",
                 font=("Arial", 11, "bold"),
             )
-            countdown_label.grid(row=1, column=0, pady=5)
+            countdown_label.grid(row=1, column=0, pady=4)
 
             def update_countdown():
                 now = datetime.now()
@@ -269,7 +270,60 @@ class StudentPanel:
             self._photo_cache.clear()
             selections = {}  # position -> IntVar(candidate_id or 0)
 
-            # Scrollable area
+            # ---------- ACTIONS ROW (ONLY SUBMIT BUTTON – TOP RIGHT) ----------
+            actions_row = tk.Frame(frame, bg=THEME_WHITE)
+            actions_row.grid(row=2, column=0, sticky="ew", padx=10, pady=(2, 4))
+            actions_row.columnconfigure(0, weight=1)  # spacer to push right
+
+            def submit_votes():
+                chosen_votes = {}
+                for position, var in selections.items():
+                    cid = var.get()
+                    if cid != 0:
+                        chosen_votes[position] = cid
+
+                if not chosen_votes:
+                    messagebox.showwarning(
+                        "No Selection", "Please select at least one candidate."
+                    )
+                    return
+
+                confirm = messagebox.askyesno(
+                    "Confirm Vote", "Are you sure you want to submit your votes?"
+                )
+                if not confirm:
+                    return
+
+                try:
+                    for position, cid in chosen_votes.items():
+                        self.db.record_vote(reg_no, cid)
+                    self._display_poll_status_screen()
+                except Exception as e:
+                    messagebox.showerror(
+                        "Database Error",
+                        f"An error occurred while submitting votes: {e}",
+                    )
+
+            tk.Button(
+                actions_row,
+                text="Submit Votes",
+                bg=THEME_RED,
+                fg=THEME_WHITE,
+                font=("Segoe UI", 12, "bold"),
+                width=18,
+                relief="flat",
+                command=submit_votes,
+            ).grid(row=0, column=1, sticky="e", pady=2)
+
+            tk.Label(
+                actions_row,
+                text=f"Voting open from {start_str} to {end_str}",
+                bg=THEME_WHITE,
+                fg="#555",
+                font=("Arial", 9, "italic"),
+            ).grid(row=1, column=1, sticky="e", pady=(0, 2))
+
+            # ---------- SCROLLABLE CANDIDATES LIST (BELOW) ----------
             list_container = tk.Frame(frame, bg=THEME_WHITE)
             list_container.grid(row=3, column=0, sticky="nsew", padx=5, pady=5)
             frame.rowconfigure(3, weight=1)
@@ -393,59 +447,8 @@ class StudentPanel:
 
                     lbl_choice.bind("<Button-1>", on_click)
 
-            footer = tk.Frame(frame, bg=THEME_WHITE)
-            footer.grid(row=4, column=0, pady=10)
-
-            def submit_votes():
-                chosen_votes = {}
-                for position, var in selections.items():
-                    cid = var.get()
-                    if cid != 0:
-                        chosen_votes[position] = cid
-
-                if not chosen_votes:
-                    messagebox.showwarning(
-                        "No Selection", "Please select at least one candidate."
-                    )
-                    return
-
-                confirm = messagebox.askyesno(
-                    "Confirm Vote", "Are you sure you want to submit your votes?"
-                )
-                if not confirm:
-                    return
-
-                try:
-                    for position, cid in chosen_votes.items():
-                        self.db.record_vote(reg_no, cid)
-                    # After voting show poll status
-                    self._display_poll_status_screen()
-                except Exception as e:
-                    messagebox.showerror(
-                        "Database Error",
-                        f"An error occurred while submitting votes: {e}",
-                    )
-
-            tk.Button(
-                footer,
-                text="Submit Votes",
-                bg=THEME_RED,
-                fg=THEME_WHITE,
-                font=("Segoe UI", 12, "bold"),
-                width=20,
-                relief="flat",
-                command=submit_votes,
-            ).pack(pady=5)
-
-            tk.Label(
-                footer,
-                text=f"Voting open from {start_str} to {end_str}",
-                bg=THEME_WHITE,
-                fg="#555",
-                font=("Arial", 10, "italic"),
-            ).pack(pady=2)
-
         self.display_content(build)
+
 
     # ---------- POLL STATUS ----------
        # ---------- POLL STATUS ----------

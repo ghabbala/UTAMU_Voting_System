@@ -8,7 +8,7 @@ from student_panel import StudentPanel
 from database import DatabaseManager
 
 # Secret reset key for admin forgotten-password
-MASTER_RESET_KEY = "UTAMU-RESET-2025"  # <-- change this to whatever you want
+MASTER_RESET_KEY = "UTAMU-RESET-2025"  
 
 
 class MainWindow:
